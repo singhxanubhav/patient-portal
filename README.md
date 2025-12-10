@@ -18,6 +18,80 @@ A full-stack application designed for healthcare platforms where users can secur
 
 ---
 
+# Design Document - Patient Portal
+
+## 1. Tech Stack Choices
+
+### Q1. What frontend framework did you use and why?
+**Choice:** React.js (Vite)
+**Reasoning:** - **Component-Based:** React allows us to build reusable UI components (like the file list and upload form), making the code clean and maintainable.
+- **State Management:** React's `useState` and `useEffect` hooks make it easy to handle real-time UI updates (e.g., refreshing the list after upload).
+- **Ecosystem:** Huge community support and libraries like `axios` make API integration seamless.
+
+### Q2. What backend framework did you choose and why?
+**Choice:** Node.js with Express.js
+**Reasoning:**
+- **Simplicity:** Express is minimal and un-opinionated, perfect for building a simple REST API quickly.
+- **JavaScript Everywhere:** Using JS on both frontend and backend reduces context switching.
+- **Middleware Support:** Easy handling of file uploads using middleware like `multer`.
+
+### Q3. What database did you choose and why?
+**Choice:** PostgreSQL (via Supabase) & Prisma ORM
+**Reasoning:**
+- **Relational Data:** Medical records require structured data (id, filename, dates), which SQL handles better than NoSQL.
+- **Prisma:** Provide type safety and auto-generated database clients, reducing the chance of SQL injection and syntax errors.
+- **Supabase:** Provides a managed PostgreSQL instance, making it easier to set up without local installation complexities.
+
+### Q4. If you were to support 1,000 users, what changes would you consider?
+1.  **Cloud Storage:** Instead of storing files on the local server disk (which is hard to scale), I would move file storage to an object store like **AWS S3** or **Supabase Storage**.
+2.  **Database Indexing:** Ensure proper indexing on the `filename` or `userId` columns for faster search queries.
+3.  **Authentication:** Implement JWT-based authentication (e.g., NextAuth or Supabase Auth) to segregate user data.
+4.  **Rate Limiting:** Use tools like `express-rate-limit` to prevent abuse of the upload API.
+
+---
+
+## 2. Architecture Overview
+
+**Flow:**
+[Frontend (React)] <---> [Backend API (Express)] <---> [Database (Supabase/PostgreSQL)]
+                                      |
+                                      V
+                                [Local Disk (uploads/)]
+
+1.  **User** interacts with the **React Frontend**.
+2.  Frontend sends HTTP requests to **Express Backend**.
+3.  Backend uses **Multer** to save the PDF file to the local `uploads/` folder.
+4.  Backend uses **Prisma** to save file metadata (name, path, size) to **Supabase**.
+5.  Backend returns a JSON response to the Frontend.
+
+---
+
+## 3. API Specification
+
+| Endpoint | Method | Description | Sample Body/Params |
+| :--- | :--- | :--- | :--- |
+| `/documents/upload` | `POST` | Upload a PDF file | Form-Data: `file` (binary) |
+| `/documents` | `GET` | List all uploaded files | None |
+| `/documents/:id` | `GET` | Download a specific file | Param: `id` (e.g., 1) |
+| `/documents/:id` | `DELETE` | Delete a file | Param: `id` (e.g., 1) |
+
+---
+
+## 4. Data Flow (Upload Process)
+
+1.  User selects a PDF file in the frontend form.
+2.  Frontend creates a `FormData` object and sends a POST request to `/documents/upload`.
+3.  **Backend Validation:** Server checks if the file is a PDF.
+4.  **Storage:** The file is saved with a unique timestamped name in the `uploads/` directory.
+5.  **Database Entry:** Prisma creates a new row in the `Document` table with the file path and metadata.
+6.  **Response:** Server responds with `201 Created` and the file details.
+7.  **UI Update:** Frontend receives the success message and refreshes the file list.
+
+## 5. Assumptions
+1.  **Single User:** The system assumes a single user environment (no login required) as per the problem statement.
+2.  **Local Storage:** The server has write permissions to the local file system.
+3.  **File Type:** Only PDF files are strictly allowed; others are rejected.
+
 ## ✨ Features
 
 - 📤 **Upload Medical Records** - Secure PDF upload with validation and file size checks
